@@ -1,0 +1,124 @@
+create database pizza_ordered_Analysis;
+
+use pizza_ordered_Analysis;
+
+-- Basic:
+-- Retrieve the total number of orders placed.
+-- Calculate the total revenue generated from pizza sales.
+-- Identify the highest-priced pizza.
+-- Identify the most common pizza size ordered.
+-- List the top 5 most ordered pizza types along with their quantities.
+
+
+
+Intermediate:
+Find the total quantity of each pizza category ordered (this will help us to understand the category which customers prefer the most).
+Determine the distribution of orders by hour of the day (at which time the orders are maximum (for inventory management and resource allocation).
+Find the category-wise distribution of pizzas (to understand customer behaviour).
+Group the orders by date and calculate the average number of pizzas ordered per day.
+Determine the top 3 most ordered pizza types based on revenue (let's see the revenue wise pizza orders to understand from sales perspective which pizza is the best selling)
+
+
+Advanced:
+Calculate the percentage contribution of each pizza type to total revenue (to understand % of contribution of each pizza in the total revenue)
+Analyze the cumulative revenue generated over time.
+Determine the top 3 most ordered pizza types based on revenue for each pizza category (In each category which pizza is the most selling)
+
+
+You may think of some more questions and try writing queries for them.
+
+
+select * from order_details;
+select * from orders;
+select * from pizza_types;
+select * from pizzas;
+
+
+
+select count(distinct(order_id)) as total_placed from orders; 
+
+select round(sum(o.quantity*p.price),1) as total_revenue from order_details as o join pizzas as  p
+on o.pizza_id=p.pizza_id;
+
+select * from pizzas order by price desc limit 1;
+
+select p.size,count(o.order_id) as common_size_ordered_pizza from orders as o join order_details as oo
+on o.order_id=oo.order_id join pizzas as p on oo.pizza_id=p.pizza_id
+group by p.size order by common_size_ordered_pizza desc limit 1;
+
+select p.pizza_type_id,sum(o.quantity) as top_order_pizza from order_details as o 
+join pizzas as p on o.pizza_id=p.pizza_id 
+group by p.pizza_type_id order by top_order_pizza desc limit 5 ;
+
+select p.category,sum(o.quantity) total_quantity  from order_details as o join pizzas as pp
+on o.pizza_id=pp.pizza_id join pizza_types as p on pp.pizza_type_id=p.pizza_type_id
+group by p.category;
+
+select * from orders;
+select * from order_details;
+
+with first as 
+(select count(order_id) as maximam_orders,hour(time)as hour_time,
+case 
+when hour(time) between 5 and 9 then "morning time"
+when hour(time) between 10 and 15 then "afternoon time"
+when hour(time) between 16 and 19 then "evening time"
+when hour(time) between 20 and 24 then "night time"
+else 0
+end as order_timing 
+from orders
+group by hour_time,order_timing)
+select hour_time,maximam_orders,count(order_timing) as counts,order_timing  from first
+group by hour_time,order_timing,maximam_orders;
+
+select count(name) as distribucation_pizza ,category from pizza_types
+group by category order by  distribucation_pizza desc;
+
+select round(avg(order_id),1)as avg_order,day(converted_date) from orders
+group by day(converted_date);
+
+select p.pizza_type_id,sum(o.quantity*p.price) as total_revenue from pizzas as p join 
+order_details as o on o.pizza_id=p.pizza_id group by p.pizza_type_id order by 
+total_revenue desc limit 3;
+
+select p.pizza_type_id,sum(o.quantity*p.price) as total_revenue,
+concat(round(100*sum(o.quantity*p.price)/(select sum(o2.quantity*p2.price) from order_details as o2 join 
+pizzas as p2 on o2.pizza_id =p2.pizza_id),1)," ","%") as precentage_contribucation 
+from order_details as o join pizzas as p on o.pizza_id=p.pizza_id
+group by p.pizza_type_id;
+
+
+select * from orders;
+select * from pizzas;
+
+select o.converted_date,p.pizza_type_id,p.price,round(sum(p.price*oo.quantity) over(order by o.converted_date),1) as over_time_revenue
+from pizzas as p join order_details as oo on oo.pizza_id=p.pizza_id 
+join orders as o on o.order_id=oo.order_id;
+
+with ranks as 
+(select p.pizza_type_id,pp.category,round(sum(o.quantity*p.price) 
+over (partition by pp.category),1) as total_revenue from pizzas as p join 
+order_details as o on o.pizza_id=p.pizza_id join pizza_types as pp on p.pizza_type_id=pp.pizza_type_id)
+
+select * from 
+(select *,row_number() over (partition by category order by total_revenue desc) 
+as rank_revenue from ranks) as e where e.rank_revenue<4
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+
+
+
+
